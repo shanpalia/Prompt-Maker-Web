@@ -1,0 +1,2 @@
+[functions.admin-prompts]
+verify_jwt = false
