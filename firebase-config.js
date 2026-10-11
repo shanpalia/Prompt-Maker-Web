@@ -12,4 +12,4 @@ const firebaseConfig = {
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-const db = firebase.firestore();
+// Prompt records are stored in Supabase; Firebase is used only for admin authentication here.
