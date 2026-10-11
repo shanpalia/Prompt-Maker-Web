@@ -30,7 +30,25 @@
 </div>
 <nav class="bottom"><a href="#" id="navHome"><span>⌂</span>Home</a><a href="#prompts" id="navExplore"><span>◈</span>Explore</a><a href="#" id="navAdmin"><span>＋</span>Admin</a></nav>
 <div id="notice" class="notice hidden" role="status"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="./firebase-config.js"></script>
+<script>
+let rows=[],selectedCategory="All",sortMode="Latest",tapCount=0,tapTimer=null,noticeTimer=null;
+const categories=["All","Portrait","Cinematic","Couple","Anime","Festival","Landscape","Car","Other"];
+const $=id=>document.getElementById(id);
+function notify(message){$("notice").textContent=message;$("notice").classList.remove("hidden");clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>$("notice").classList.add("hidden"),3600)}
+function escapeHTML(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function renderCategories(){$("categories").innerHTML=categories.map(c=>'<button class="chip '+(selectedCategory===c?'active':'')+'" data-category="'+escapeHTML(c)+'">'+(c==="All"?"▦":c==="Portrait"?"♟":c==="Cinematic"?"▣":c==="Couple"?"♡":"✦")+' &nbsp;'+escapeHTML(c)+'</button>').join("");$("categories").querySelectorAll("button").forEach(b=>b.onclick=()=>{selectedCategory=b.dataset.category;renderCategories();renderPrompts()})}
+function renderPrompts(){const q=$("search").value.trim().toLowerCase();let list=rows.filter(p=>(selectedCategory==="All"||String(p.category||"").toLowerCase()===selectedCategory.toLowerCase())&&[p.title,p.category,p.prompt_text].some(v=>String(v||"").toLowerCase().includes(q)));list.sort((a,b)=>sortMode==="Latest"?dateValue(b.published_at||b.created_at)-dateValue(a.published_at||a.created_at):String(a.title||"").localeCompare(String(b.title||"")));$("listTitle").textContent="✦ "+(selectedCategory==="All"?"Published Prompts":selectedCategory+" Prompts");$("count").textContent=list.length;$("promptList").innerHTML=list.map(p=>'<article class="card"><div class="thumb">'+(p.image_url?'<img src="'+escapeHTML(p.image_url)+'" alt="'+escapeHTML(p.title)+'" loading="lazy" referrerpolicy="no-referrer">':'<span class="placeholder">✦</span>')+'<button class="copySmall" data-copy="'+escapeHTML(p.id)+'">▢ Copy</button></div><div class="cardBody"><h3>'+escapeHTML(p.title)+'</h3><span class="categoryText">'+escapeHTML(p.category||"Other")+'</span><details class="details"><summary>View full prompt</summary><p>'+escapeHTML(p.prompt_text)+'</p><button class="smallBtn" data-copy="'+escapeHTML(p.id)+'">Copy prompt</button></details></div></article>').join("");$("promptList").querySelectorAll("[data-copy]").forEach(b=>b.onclick=()=>copyPrompt(b.dataset.copy));$("empty").classList.toggle("hidden",list.length!==0);$("promptList").classList.toggle("hidden",list.length===0);$("emptyTitle").textContent=q?"No matching prompts":"No prompts published yet";$("emptyText").textContent=q?"Try a different keyword or category.":"Published prompts from the admin will appear here automatically."}
+function dateValue(v){if(!v)return 0;if(v.toDate)return v.toDate().getTime();const n=Date.parse(v);return Number.isFinite(n)?n:0}
+async function loadPrompts(){try{const snap=await db.collection("prompts").where("status","==","published").get();rows=snap.docs.map(d=>({id:d.id,...d.data()}));renderPrompts()}catch(e){rows=[];renderPrompts();notify("Could not load prompts. Check Firestore rules and database setup: "+e.message)}}
+async function copyPrompt(id){const p=rows.find(x=>String(x.id)===String(id));if(!p)return;try{await navigator.clipboard.writeText(p.prompt_text||"");notify("Prompt copied. Paste it into your AI image tool.")}catch{notify("Clipboard access was blocked. Expand View full prompt and copy manually.")}}
+$("brandTap").onclick=()=>{tapCount++;clearTimeout(tapTimer);if(tapCount>=5){tapCount=0;location.href="./admin.html"}else tapTimer=setTimeout(()=>tapCount=0,1700)};
+$("adminBtn").onclick=()=>location.href="./admin.html";$("navAdmin").onclick=e=>{e.preventDefault();location.href="./admin.html"};$("backHome").onclick=()=>location.href="./index.html";$("navHome").onclick=e=>{e.preventDefault();location.href="./index.html"};$("navExplore").onclick=e=>{e.preventDefault();$("promptList").scrollIntoView({behavior:"smooth"})};$("focusSearch").onclick=()=>$("search").focus();$("exploreBtn").onclick=()=>$("promptList").scrollIntoView({behavior:"smooth"});$("search").addEventListener("input",renderPrompts);$("sortBtn").onclick=()=>{sortMode=sortMode==="Latest"?"A–Z":"Latest";$("sortBtn").textContent=sortMode==="Latest"?"Latest ↓":"A–Z ↑";renderPrompts()};
+renderCategories();renderPrompts();loadPrompts();
+</script>
 <script>
 /* CONFIGURATION: enter your Supabase project URL and public anon/publishable key below. Do not use service_role keys in browser code. */
 const SUPABASE_URL = "https://ralinnuegsbuvlhwpzln.supabase.co";
