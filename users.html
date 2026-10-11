@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#effbf5"><title>User Login — Prompt Maker</title>
+<style>
+:root{--green:#147d53;--ink:#172b24;--muted:#718179;--line:#e5eee8}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:#f7fbf8;color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}.card{width:min(100%,440px);background:#fff;border:1px solid var(--line);border-radius:24px;padding:28px;box-shadow:0 14px 45px #173d2810}.brand{font-size:22px;font-weight:850}.brand em{font-style:normal;color:var(--green)}p{color:var(--muted)}label{display:grid;gap:6px;font-weight:700;font-size:13px;margin:14px 0}input{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;font:inherit}button{border:0;border-radius:11px;padding:12px 15px;background:var(--green);color:#fff;font:inherit;font-weight:750;cursor:pointer;width:100%;margin-top:10px}.secondary{background:#e6f7ec;color:var(--green)}a{color:var(--green)}#status{overflow-wrap:anywhere;font-size:13px;min-height:22px}.links{display:flex;justify-content:space-between;gap:12px;font-size:13px;margin-top:18px}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script><script src="./firebase-config.js"></script></head>
+<body><main class="card"><div class="brand">Prompt <em>Maker</em></div><p>Sign in or create your PaliaAPK HUB account.</p>
+<form id="authForm"><label>Email address<input id="email" type="email" autocomplete="email" required></label><label>Password<input id="password" type="password" minlength="6" autocomplete="current-password" required></label><button id="submitBtn" type="submit">Sign in</button></form>
+<button class="secondary" id="toggleBtn" type="button">Create a new account</button><button class="secondary hidden" id="signoutBtn" type="button" hidden>Sign out</button><p id="status" role="status"></p>
+<div class="links"><a href="./index.html">← Browse prompts</a><a href="./admin.html">Admin</a></div></main>
+<script>
+let signup=false;const $=id=>document.getElementById(id);
+$("toggleBtn").onclick=()=>{signup=!signup;$("submitBtn").textContent=signup?"Create account":"Sign in";$("toggleBtn").textContent=signup?"I already have an account":"Create a new account";$("password").autocomplete=signup?"new-password":"current-password";$("status").textContent=""};
+$("authForm").addEventListener("submit",async e=>{e.preventDefault();$("submitBtn").disabled=true;$("status").textContent="Please wait…";try{const email=$("email").value.trim(),password=$("password").value;const result=signup?await auth.createUserWithEmailAndPassword(email,password):await auth.signInWithEmailAndPassword(email,password);$("status").textContent="Signed in as "+result.user.email+". Redirecting…";location.href="./index.html"}catch(err){$("status").textContent=err.message||"Authentication failed."}finally{$("submitBtn").disabled=false}});
+$("signoutBtn").onclick=async()=>{await auth.signOut();$("status").textContent="Signed out."};
+auth.onAuthStateChanged(user=>{if(user){$("status").textContent="Signed in as "+user.email;$("signoutBtn").hidden=false}else $("signoutBtn").hidden=true});
+</script></body></html>
