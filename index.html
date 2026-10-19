@@ -200,4 +200,73 @@ $("openAiBtn").addEventListener('click', ()=>{window.open('https://chat.openai.c
 // existing init calls (kept intact)
 renderCategories();renderPrompts();if(location.search.includes("admin")){adminUnlocked=false;setView(true)}auth.onAuthStateChanged(()=>refreshSession());if(db)loadPrompts();else renderPrompts()
 </script>
+
+<script>
+/* Reliable AI generator bootstrap: keeps the existing page/admin code intact. */
+(function(){
+  const API = "https://paliaai.onrender.com/api/chat";
+  const $id = id => document.getElementById(id);
+  function status(text){const el=$id("aiStatus"); if(el) el.textContent=text;}
+  function showRetry(show){const el=$id("retryBtn"); if(el) el.style.display=show?"inline-block":"none";}
+  function visitorId(){
+    try {
+      let id=localStorage.getItem("palia_prompt_maker_user_id");
+      if(!id){id="pm_"+(crypto.randomUUID?crypto.randomUUID():Date.now()+"_"+Math.random().toString(36).slice(2));localStorage.setItem("palia_prompt_maker_user_id",id);}
+      return id;
+    } catch(e) { return "pm_session_"+Math.random().toString(36).slice(2); }
+  }
+  let busy=false;
+  async function run(){
+    if(busy)return;
+    const idea=($id("aiIdea")?.value||"").trim();
+    const style=($id("aiStyle")?.value||"Realistic").trim();
+    const result=$id("aiResult"), btn=$id("generateBtn");
+    if(!idea){status("Please describe your image idea first.");$id("aiIdea")?.focus();return;}
+    if(!result){console.error("Palia AI: result element missing");return;}
+    busy=true;if(btn)btn.disabled=true;showRetry(false);result.textContent="";status("Connecting to Palia AI…");
+    const controller=new AbortController(); const timer=setTimeout(()=>controller.abort(),45000);
+    try{
+      const response=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},signal:controller.signal,
+        body:JSON.stringify({
+          userId:visitorId(),
+          timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"Asia/Kolkata",
+          model:"palia-ai-ultra",
+          systemInstruction:"You are an expert AI image-prompt engineer. Return one detailed, polished image-generation prompt only. Include subject, composition, lighting, background, camera and quality details when appropriate. Do not explain your answer.",
+          message:"Create a ready-to-use image-generation prompt. Style: "+style+". User's image idea: "+idea
+        })});
+      let data={};try{data=await response.json()}catch(e){}
+      if(!response.ok || data.success===false){
+        const msg=data.error||data.message||(response.status+" "+response.statusText);
+        status(response.status===429?"Palia AI usage limit reached for this browser/account. Please try later.":"Palia AI error ("+response.status+"): "+msg);
+        result.textContent="Prompt could not be generated. Please use Retry after the issue is resolved.";
+        showRetry(true);return;
+      }
+      const generated=(data.text||data.reply||data.output_text||"").toString().trim();
+      if(!generated){status("Palia AI returned an empty response. Please retry.");showRetry(true);return;}
+      result.textContent=generated.replace(/\s+/g," ").trim();
+      status("Prompt generated successfully.");
+    }catch(error){
+      console.error("Palia AI generator:",error);
+      status(error.name==="AbortError"?"Palia AI took too long to respond. Please retry.":"Could not connect to Palia AI: "+(error.message||"network error"));
+      showRetry(true);
+    }finally{clearTimeout(timer);busy=false;if(btn)btn.disabled=false;}
+  }
+  document.addEventListener("click",function(event){
+    const target=event.target.closest("#generateBtn, #retryBtn");
+    if(!target)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    run();
+  },true);
+  document.addEventListener("click",function(event){
+    const target=event.target.closest("#copyAiBtn");
+    if(!target)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    const text=($id("aiResult")?.textContent||"").trim();
+    if(!text || text.startsWith("Nothing generated")){status("Generate a prompt first.");return;}
+    if(navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(()=>status("Prompt copied.")).catch(()=>status("Clipboard unavailable. Select and copy the prompt manually."));
+    else status("Clipboard unavailable. Select and copy the prompt manually.");
+  },true);
+})();
+</script>
+
 </body></html>
